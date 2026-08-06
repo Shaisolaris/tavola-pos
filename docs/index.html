@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tavola POS — Restaurant Point of Sale</title>
+<meta name="description" content="Restaurant POS demo: table floor plan, order building with modifiers, kitchen ticket flow, split-by-item checkout with tip.">
+<style>
+:root{--bg:#14171C;--panel:#1C2129;--ink:#EDF0F4;--sub:#8B95A3;--line:#2A313C;--orange:#F2762E;--green:#33B679;--red:#E5534B;--blue:#4A90E8;
+--sans:'Inter',-apple-system,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.5}
+.top{background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:13px 22px;position:sticky;top:0;z-index:50}
+.logo{font-weight:800;font-size:17px}
+.logo span{color:var(--orange)}
+.tinfo{font-size:11.5px;color:var(--sub);font-weight:700}
+.tabs{display:flex;gap:6px}
+.tab{padding:8px 16px;border-radius:9px;font-size:12px;font-weight:700;color:var(--sub);cursor:pointer;border:1px solid transparent}
+.tab.on{background:rgba(242,118,46,.12);color:var(--orange);border-color:rgba(242,118,46,.3)}
+.view{display:none;padding:20px 22px 60px;max-width:1160px;margin:0 auto}
+.view.on{display:block}
+/* floor */
+.legend{display:flex;gap:16px;font-size:11px;color:var(--sub);font-weight:700;margin-bottom:16px}
+.dot{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+.floor{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.table{background:var(--panel);border:1.5px solid var(--line);border-radius:15px;padding:18px;cursor:pointer;transition:.15s;text-align:center}
+.table:hover{transform:translateY(-2px)}
+.table.free{border-color:#2E4A3C}
+.table.seated{border-color:var(--orange);background:rgba(242,118,46,.06)}
+.table.check{border-color:var(--blue);background:rgba(74,144,232,.06)}
+.tno{font-size:19px;font-weight:800}
+.tst{font-size:10.5px;font-weight:800;margin-top:5px;text-transform:uppercase;letter-spacing:.06em}
+.free .tst{color:var(--green)}.seated .tst{color:var(--orange)}.check .tst{color:var(--blue)}
+.tmeta{font-size:11px;color:var(--sub);margin-top:4px}
+/* order */
+.order{display:grid;grid-template-columns:1fr 330px;gap:18px;align-items:start}
+.menu .mcat{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.mc{padding:8px 15px;border-radius:100px;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--sub);cursor:pointer}
+.mc.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.items{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mi{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;cursor:pointer;transition:.13s}
+.mi:hover{border-color:var(--orange)}
+.min{font-weight:700;font-size:13px}
+.mip{color:var(--orange);font-weight:800;font-size:12.5px;margin-top:6px}
+.mid{font-size:10.5px;color:var(--sub);margin-top:2px}
+.ticket{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:18px;position:sticky;top:76px}
+.ticket h2{font-size:14.5px;font-weight:800;margin-bottom:4px}
+.ticket .th{font-size:11px;color:var(--sub);margin-bottom:12px}
+.oline{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+.oline .mods{font-size:10.5px;color:var(--orange);display:block;margin-top:1px}
+.oline button{background:none;border:0;color:var(--red);cursor:pointer;font-size:12px;font-weight:800}
+.trow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);padding:3px 0}
+.trow.tt{font-size:15.5px;font-weight:800;color:var(--ink);padding-top:8px}
+.btn{width:100%;background:var(--orange);color:#fff;border:0;border-radius:11px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;transition:.15s}
+.btn:hover{filter:brightness(1.1)}
+.btn.g{background:var(--green)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.empty{color:var(--sub);text-align:center;padding:20px 0;font-size:12.5px}
+/* modifier sheet */
+.sheetb{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:130;display:none;align-items:center;justify-content:center;padding:18px}
+.sheetb.open{display:flex}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:380px;width:100%;padding:22px}
+.sheet h3{font-size:17px;font-weight:800}
+.sheet .sp{color:var(--orange);font-weight:800;margin:4px 0 12px}
+.mod{display:flex;justify-content:space-between;padding:10px 13px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;font-size:12.5px;font-weight:600;transition:.13s}
+.mod.on{border-color:var(--orange);background:rgba(242,118,46,.08)}
+.mod span:last-child{color:var(--sub)}
+/* kitchen */
+.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.kt{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.kth{padding:11px 15px;font-weight:800;font-size:12.5px;display:flex;justify-content:space-between;border-bottom:1px solid var(--line)}
+.kth .age{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:100px;background:rgba(51,182,121,.15);color:var(--green)}
+.kth .age.old{background:rgba(229,83,75,.15);color:var(--red)}
+.ktb{padding:12px 15px;font-size:12.5px}
+.ktb div{padding:3px 0}
+.ktb .m{color:var(--orange);font-size:11px}
+.ktf{padding:10px 15px;border-top:1px solid var(--line)}
+.ktf button{width:100%;background:var(--green);color:#fff;border:0;border-radius:9px;padding:9px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit}
+/* pay */
+.paywrap{max-width:430px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+.paywrap h2{font-size:16px;font-weight:800;margin-bottom:12px}
+.tips{display:flex;gap:8px;margin:12px 0}
+.tip{flex:1;padding:11px 0;text-align:center;border:1px solid var(--line);border-radius:10px;font-weight:800;font-size:12.5px;cursor:pointer}
+.tip.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 22px;border-radius:100px;font-size:12.5px;font-weight:800;opacity:0;transition:.3s;z-index:220;pointer-events:none}
+.toast.show{opacity:1}
+@media(max-width:920px){.order{grid-template-columns:1fr}.ticket{position:static}.floor{grid-template-columns:1fr 1fr}.items{grid-template-columns:1fr 1fr}.kgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="logo">Tavola<span>POS</span></span>
+  <div class="tabs">
+    <span class="tab on" onclick="nav(this,'floor')">🍽 Floor</span>
+    <span class="tab" onclick="nav(this,'order')">📝 Order</span>
+    <span class="tab" onclick="nav(this,'kitchen')">👨‍🍳 Kitchen <span id="kCount"></span></span>
+    <span class="tab" onclick="nav(this,'pay')">💳 Pay</span>
+  </div>
+  <span class="tinfo">Dinner service · 7:42 PM</span>
+</div>
+
+<!-- FLOOR -->
+<div class="view on" id="v-floor">
+  <div class="legend"><span><span class="dot" style="background:var(--green)"></span>Free</span><span><span class="dot" style="background:var(--orange)"></span>Seated</span><span><span class="dot" style="background:var(--blue)"></span>Check dropped</span></div>
+  <div class="floor" id="floor"></div>
+</div>
+
+<!-- ORDER -->
+<div class="view" id="v-order">
+  <div class="order">
+    <div class="menu">
+      <div class="mcat" id="mcats"></div>
+      <div class="items" id="mitems"></div>
+    </div>
+    <aside class="ticket">
+      <h2 id="oTable">Table 4</h2>
+      <div class="th">Server: Nadia · Covers: 2</div>
+      <div id="olines"></div>
+      <div style="margin-top:10px">
+        <div class="trow"><span>Subtotal</span><span id="oSub"></span></div>
+        <div class="trow"><span>Tax (8.5%)</span><span id="oTax"></span></div>
+        <div class="trow tt"><span>Total</span><span id="oTot"></span></div>
+      </div>
+      <button class="btn" onclick="fireKitchen()">🔥 Fire to kitchen</button>
+      <button class="btn ghost" onclick="nav(document.querySelectorAll('.tab')[3],'pay')">Go to payment →</button>
+    </aside>
+  </div>
+</div>
+
+<!-- KITCHEN -->
+<div class="view" id="v-kitchen">
+  <div class="kgrid" id="kgrid"></div>
+</div>
+
+<!-- PAY -->
+<div class="view" id="v-pay">
+  <div class="paywrap">
+    <h2>Payment — <span id="pTable">Table 4</span></h2>
+    <div class="trow"><span>Check total</span><span id="pTot"></span></div>
+    <div style="font-size:11.5px;color:var(--sub);font-weight:700;margin-top:12px">Add tip</div>
+    <div class="tips" id="tips"></div>
+    <div class="trow"><span>Tip</span><span id="pTip"></span></div>
+    <div class="trow tt"><span>Charge amount</span><span id="pFinal"></span></div>
+    <button class="btn" onclick="pay('card')">💳 Charge card</button>
+    <button class="btn ghost" onclick="pay('cash')">💵 Cash tendered</button>
+    <button class="btn ghost" onclick="splitCheck()">✂️ Split evenly ×2</button>
+  </div>
+</div>
+<div class="toast" id="toastEl"></div>
+
+<script>
+const MENU={
+ 'Starters':[['Burrata & Peach',14,'basil oil, sourdough'],['Crispy Calamari',13,'lemon aioli'],['Wood-fired Meatballs',12,'san marzano, ricotta']],
+ 'Mains':[['Rigatoni alla Vodka',19,'calabrian chili'],['Branzino',28,'salsa verde, fennel'],['Short Rib Pappardelle',26,'gremolata'],['Margherita Pizza',17,'fior di latte']],
+ 'Drinks':[['House Negroni',13,''],['Montepulciano (glass)',11,''],['San Pellegrino',5,'']],
+ 'Desserts':[['Tiramisu',9,'classic'],['Olive Oil Cake',8,'citrus glaze']]
+};
+const MODS={'Rigatoni alla Vodka':[['Add chicken',5],['Extra spicy',0],['Gluten-free pasta',2]],
+ 'Margherita Pizza':[['Add prosciutto',4],['Extra basil',0],['Well done',0]],
+ 'Branzino':[['Sub grilled vegetables',0],['Extra salsa verde',1]],
+ 'Short Rib Pappardelle':[['Extra gremolata',0],['Add parmesan',2]]};
+let TABLES=[
+ {n:1,st:'free'},{n:2,st:'seated',covers:4,since:'7:05'},{n:3,st:'check',covers:2,since:'6:22'},{n:4,st:'seated',covers:2,since:'7:31'},
+ {n:5,st:'free'},{n:6,st:'seated',covers:6,since:'6:48'},{n:7,st:'free'},{n:8,st:'check',covers:3,since:'6:10'},
+];
+let cat='Starters',order=[],kitchen=[],tipPct=0.2,paid=false;
+let pendItem=null,pendMods=[];
+const fmt=n=>'$'+n.toFixed(2);
+function nav(el,v){
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');
+ document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+ document.getElementById('v-'+v).classList.add('on');
+ if(v==='pay')rPay();
+}
+function rFloor(){
+ document.getElementById('floor').innerHTML=TABLES.map(t=>`
+  <div class="table ${t.st}" onclick="pickTable(${t.n})">
+   <div class="tno">T${t.n}</div>
+   <div class="tst">${t.st==='free'?'Free':t.st==='seated'?'Seated':'Check dropped'}</div>
+   <div class="tmeta">${t.st==='free'?'—':t.covers+' covers · since '+t.since}</div>
+  </div>`).join('');
+}
+function pickTable(n){
+ const t=TABLES.find(x=>x.n===n);
+ if(t.st==='free'){t.st='seated';t.covers=2;t.since='7:42';toast('Table '+n+' seated — 2 covers');rFloor();return}
+ toast('Opened Table '+n+' order');
+ nav(document.querySelectorAll('.tab')[1],'order');
+}
+function rMenu(){
+ document.getElementById('mcats').innerHTML=Object.keys(MENU).map(c=>`<span class="mc${c===cat?' on':''}" onclick="cat='${c}';rMenu()">${c}</span>`).join('');
+ document.getElementById('mitems').innerHTML=MENU[cat].map((m,i)=>`
+  <div class="mi" onclick="addItem('${cat}',${i})"><div class="min">${m[0]}</div><div class="mip">${fmt(m[1])}</div><div class="mid">${m[2]}</div></div>`).join('');
+}
+function addItem(c,i){
+ const m=MENU[c][i];
+ if(MODS[m[0]]){pendItem=m;pendMods=[];rMods();document.getElementById('sbMods').classList.add('open');return}
+ order.push({n:m[0],p:m[1],mods:[]});toast(m[0]+' added');rOrder();
+}
+function rMods(){
+ document.getElementById('modT').textContent=pendItem[0];
+ document.getElementById('modP').textContent=fmt(pendItem[1]);
+ document.getElementById('modList').innerHTML=MODS[pendItem[0]].map((md,k)=>`
+  <div class="mod${pendMods.includes(k)?' on':''}" onclick="tgMod(${k})"><span>${md[0]}</span><span>${md[1]?'+'+fmt(md[1]):'free'}</span></div>`).join('');
+}
+function tgMod(k){pendMods.includes(k)?pendMods.splice(pendMods.indexOf(k),1):pendMods.push(k);rMods()}
+function confirmMods(){
+ const mods=pendMods.map(k=>MODS[pendItem[0]][k]);
+ const p=pendItem[1]+mods.reduce((a,m)=>a+m[1],0);
+ order.push({n:pendItem[0],p,mods:mods.map(m=>m[0])});
+ document.getElementById('sbMods').classList.remove('open');
+ toast(pendItem[0]+' added'+(mods.length?' with '+mods.length+' mod(s)':''));rOrder();
+}
+function rmLine(i){order.splice(i,1);rOrder()}
+function totals(){
+ const sub=order.reduce((a,o)=>a+o.p,0);
+ return {sub,tax:sub*0.085,tot:sub*1.085};
+}
+function rOrder(){
+ const t=totals();
+ document.getElementById('olines').innerHTML=order.length?order.map((o,i)=>`
+  <div class="oline"><span>${o.n}${o.mods.length?`<span class="mods">+ ${o.mods.join(', ')}</span>`:''}</span>
+  <span>${fmt(o.p)} <button onclick="rmLine(${i})">✕</button></span></div>`).join('')
+ :'<div class="empty">No items yet — tap the menu.</div>';
+ document.getElementById('oSub').textContent=fmt(t.sub);
+ document.getElementById('oTax').textContent=fmt(t.tax);
+ document.getElementById('oTot').textContent=fmt(t.tot);
+}
+function fireKitchen(){
+ if(!order.length){toast('Nothing to fire');return}
+ kitchen.push({tbl:'T4',items:order.map(o=>({n:o.n,mods:o.mods})),age:0});
+ toast('Ticket fired to kitchen 🔥 '+order.length+' items');
+ rKitchen();
+}
+function rKitchen(){
+ document.getElementById('kCount').textContent=kitchen.length?'('+kitchen.length+')':'';
+ document.getElementById('kgrid').innerHTML=kitchen.length?kitchen.map((k,i)=>`
+  <div class="kt"><div class="kth"><span>${k.tbl} · ${k.items.length} items</span><span class="age${k.age>1?' old':''}">${k.age===0?'just fired':k.age+' min'}</span></div>
+  <div class="ktb">${k.items.map(it=>`<div>• ${it.n}${it.mods.length?`<div class="m">   ${it.mods.join(' · ')}</div>`:''}</div>`).join('')}</div>
+  <div class="ktf"><button onclick="bump(${i})">✓ Bump — order up</button></div></div>`).join('')
+ :'<div class="empty" style="grid-column:1/-1;padding:50px">Kitchen board clear. 👨‍🍳</div>';
+}
+function bump(i){const k=kitchen[i];kitchen.splice(i,1);toast(k.tbl+' order up — server notified 🛎');rKitchen()}
+setInterval(()=>{kitchen.forEach(k=>k.age++);if(document.getElementById('v-kitchen').classList.contains('on'))rKitchen()},60000);
+function rTips(){
+ document.getElementById('tips').innerHTML=[0.18,0.2,0.25,0].map(p=>`
+  <div class="tip${p===tipPct?' on':''}" onclick="tipPct=${p};rPay()">${p?Math.round(p*100)+'%':'No tip'}</div>`).join('');
+}
+function rPay(){
+ const t=totals(),tip=t.tot*tipPct;
+ document.getElementById('pTot').textContent=fmt(t.tot);
+ document.getElementById('pTip').textContent=fmt(tip);
+ document.getElementById('pFinal').textContent=fmt(t.tot+tip);
+ rTips();
+}
+function pay(m){
+ const t=totals();if(!order.length){toast('No open check');return}
+ const amt=fmt(t.tot*(1+tipPct));
+ order=[];rOrder();
+ TABLES.find(x=>x.n===4).st='free';rFloor();
+ toast((m==='card'?'Card charged ':'Cash settled ')+amt+' · receipt printed ✓ Table 4 closed');
+}
+function splitCheck(){
+ const t=totals();if(!order.length){toast('No open check');return}
+ toast('Split ×2 → two checks of '+fmt(t.tot*(1+tipPct)/2)+' each');
+}
+let tt;function toast(m){const t=document.getElementById('toastEl');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2300)}
+rFloor();rMenu();rOrder();rKitchen();rPay();
+</script>
+
+<div class="sheetb" id="sbMods">
+  <div class="sheet">
+    <h3 id="modT"></h3><div class="sp" id="modP"></div>
+    <div id="modList"></div>
+    <button class="btn" onclick="confirmMods()">Add to order</button>
+    <button class="btn ghost" onclick="document.getElementById('sbMods').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+</body>
+</html>
