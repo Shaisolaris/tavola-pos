@@ -22,3 +22,7 @@ Shai
 ## License
 
 MIT
+
+## Paired product
+
+This is the restaurant-side admin. The customer-facing half is [Tavola Orders](https://shaisolaris.github.io/tavola-orders/) — QR table ordering with live status.
