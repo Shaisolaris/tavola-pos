@@ -26,3 +26,7 @@ MIT
 ## Paired product
 
 This is the restaurant-side admin. The customer-facing half is [Tavola Orders](https://shaisolaris.github.io/tavola-orders/) — QR table ordering with live status.
+
+## Architecture notes
+
+Table state machine: floor, order, kitchen and payment views all render from one table-state model. Paired with the customer-side Tavola Orders demo. Lighthouse: Performance 100 · Accessibility 94 · Best Practices 96 · SEO 100.
